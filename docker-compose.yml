@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: urbansense_postgis
+    environment:
+      POSTGRES_USER: urbansense
+      POSTGRES_PASSWORD: urbansense_secure_password
+      POSTGRES_DB: urbansense_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U urbansense -d urbansense_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: urbansense_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://urbansense:urbansense_secure_password@postgres:5432/urbansense_db
+      - SECRET_KEY=urbansense_ai_secret_key_sih2026_bel_super_secure
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: urbansense_frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
